@@ -1,0 +1,15 @@
+{
+  "name": "xlsx2josn-multi",
+  "version": "0.0.1",
+  "dependencies": {
+    "underscore": "^1.6.0",
+    "fs-extra": "^0.9.1",
+    "unzip": "^0.1.9",
+    "node-expat": "^2.2.0",
+    "libxmljs": "^0.8.1",
+    "async": "^0.9.0"
+  },
+  "scripts": {
+    "test": "node-dev ./test/index.coffee"
+  }
+}
