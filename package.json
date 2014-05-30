@@ -9,6 +9,7 @@
     "libxmljs": "^0.8.1",
     "async": "^0.9.0"
   },
+  "main": "./lib/",
   "scripts": {
     "test": "node-dev ./test/index.coffee"
   }

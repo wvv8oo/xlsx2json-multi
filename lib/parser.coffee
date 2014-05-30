@@ -11,7 +11,7 @@ _util = require 'util'
 class ParserXLSX extends _events.EventEmitter
   constructor: (@options)->
     #_events.EventEmitter.call @
-    @sheets = {}
+    @sheets = []
 
   #释放文件到目标目录
   extract: (cb)->
@@ -22,12 +22,12 @@ class ParserXLSX extends _events.EventEmitter
   #分析总目录
   parseWorkBook: (cb)->
     parser = _expat.createParser()
-    self = this
+    self = @
 
     parser.on "startElement", (name, attrs) ->
       if name is "sheet"
         key = attrs["r:id"].replace(/\D+/, "sheet")
-        self.sheets[key] =
+        self.sheets.push
           name: key
           title: attrs.name
       return
@@ -40,7 +40,9 @@ class ParserXLSX extends _events.EventEmitter
     stream = _fs.createReadStream(workbook, bufferSize: 64 * 1024)
     stream.pipe parser
     stream.on 'error', (err)-> cb err
-    stream.on 'close', -> cb null
+    stream.on 'close', ->
+      self.options.onDidParseWorkBook?(self.sheets)
+      cb null
 
   #转换所有
   parseSharedStrings: (cb)->
@@ -93,14 +95,11 @@ class ParserXLSX extends _events.EventEmitter
   #转换多个sheets
   parseSheets: (cb)->
     self = @
-    #转换sheet为array
-    sheets = []
-    sheets.push value for key, value of @sheets
-
+    index = 0
     _async.whilst(
-      -> sheets.length > 0
+      -> index < self.sheets.length
       (done)->
-        sheet = sheets.shift()
+        sheet = self.sheets[index++]
         #检查是否需要跳过
         return done null if self.options?onShouldParseSheet sheet
         file = _path.join(self.options.cachePath, 'xl', 'worksheets', "#{sheet.name}.xml")
@@ -172,6 +171,8 @@ class ParserXLSX extends _events.EventEmitter
         while i < values.length
           value += values[i].text()
           i++
+
+      value = String(parseFloat(value)) if /(\d+)\.\d{4,}/.test value
       data[cell.row - d[0].row][cell.column - d[0].column] = value
       return
 
@@ -183,7 +184,7 @@ class ParserXLSX extends _events.EventEmitter
     queue = []
     queue.push(
       #释放出sheets
-      #(done)-> self.extract done
+      (done)-> self.extract done
       (done)-> self.parseWorkBook done
       (done)-> self.parseSharedStrings done
       (done)-> self.parseSheets done
