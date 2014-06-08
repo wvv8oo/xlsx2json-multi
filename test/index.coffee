@@ -2,12 +2,12 @@ _XLSXParser = require('../lib').XLSXParser
 _path = require 'path'
 
 options =
-  xlsxFile: _path.join __dirname, 'nuts.xlsx'
+  xlsxFile: _path.join __dirname, 'test.xlsx'
   cachePath: _path.join __dirname, 'cache'
   onShouldParseSheet: (sheet)->
     return sheet.name isnt 'sheet1'
   onDidParseSheet: (sheet, data, cb)->
-    console.log sheet, data[5]
+    console.log data[0].merge
     cb null
 
 parser = new _XLSXParser options
