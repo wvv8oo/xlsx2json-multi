@@ -108,6 +108,20 @@ class ParserXLSX extends _events.EventEmitter
       cb
     )
 
+  #查找合并的单元格
+  sheetMergeCells: (sheet)->
+    result = []
+    mergeCells = sheet.find("/a:worksheet/a:mergeCells/a:mergeCell", @xlsx.namespace)
+    for cell in mergeCells
+      matrix = cell.attr('ref').value().split(':')
+      result.push(
+        y1: @columnToInt(matrix[0][0]) - 1
+        x1: parseInt(matrix[0][1]) - 1
+        y2: @columnToInt(matrix[1][0]) - 1
+        x2: parseInt(matrix[1][1]) - 1
+      )
+    result
+
   #分析具体的sheet，摘自第三方代码，暂未统一风格
   parseSheet: (sheet, cb)->
     self = @
@@ -139,7 +153,9 @@ class ParserXLSX extends _events.EventEmitter
       @type = type
       return
 
+    mergeCells = self.sheetMergeCells sheet
     cellNodes = sheet.find("/a:worksheet/a:sheetData/a:row/a:c", @xlsx.namespace)
+
     cells = _(cellNodes).map((node) ->
       new Cell(node)
     )
@@ -162,23 +178,23 @@ class ParserXLSX extends _events.EventEmitter
       data.push _row
       #return
 
-    merge = []
-    mergeCell = null
-    lastRowIndex = 0
+#    merge = []
+#    mergeCell = null
+#    lastRowIndex = 0
     _.each cells, (cell) ->
       value = cell.value
-      #推断为合并单元格
-      if not cell.type and not cell.value
-        #已经有merge了
-        if mergeCell
-          mergeCell.colspan++
-        else
-          mergeCell = colspan: 2, start: cell.column - 2
-      else
-        #存在mergeCell，则将mergeCell加入到列表中，
-        if mergeCell
-          merge.push _.extend {}, mergeCell
-          mergeCell = null
+#      #推断为合并单元格
+#      if not cell.type and not cell.value
+#        #已经有merge了
+#        if mergeCell
+#          mergeCell.colspan++
+#        else
+#          mergeCell = colspan: 2, start: cell.column - 2
+#      else
+#        #存在mergeCell，则将mergeCell加入到列表中，
+#        if mergeCell
+#          merge.push _.extend {}, mergeCell
+#          mergeCell = null
 
       if cell.type is "s"
         values = self.xlsx.sharedStrings.find("//a:si[" + (parseInt(value) + 1) + "]//a:t[not(ancestor::a:rPh)]", self.xlsx.namespace)
@@ -190,19 +206,19 @@ class ParserXLSX extends _events.EventEmitter
           i++
 
       value = String(parseFloat(value)) if /(\d+)\.\d{4,}/.test value
-      rowIndex = cell.row - d[0].row
-      row = data[rowIndex]
-      row[cell.column - d[0].column] = value
+#      rowIndex = cell.row - d[0].row
+#      row = data[rowIndex]
+      data[cell.row - d[0].row][cell.column - d[0].column] = value
 
-      #新的一行了
-      if lastRowIndex != rowIndex and merge.length > 0
-        data[rowIndex - 1].merge = merge
-        merge = []
-
-      lastRowIndex = rowIndex
+#      #新的一行了
+#      if lastRowIndex != rowIndex
+#        data[rowIndex - 1].merge = merge if merge.length > 0
+#        merge = []
+#
+#      lastRowIndex = rowIndex
 
     #data[rowIndex].merge = merge if merge.length > 0
-    cb null, data
+    cb null, merge: mergeCells, data: data
 
   #执行操作
   execute: (cb)->
