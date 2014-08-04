@@ -159,6 +159,10 @@ class ParserXLSX extends _events.EventEmitter
     cells = _(cellNodes).map((node) ->
       new Cell(node)
     )
+
+    #空数据
+    return cb null, merge: [], data: [] if cells.length is 0
+
     d = sheet.get("//a:dimension/@ref", self.xlsx.namespace)
     if d
       d = _.map(d.value().split(":"), (v) ->
