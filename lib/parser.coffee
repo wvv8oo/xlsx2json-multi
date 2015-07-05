@@ -103,6 +103,10 @@ class ParserXLSX extends _events.EventEmitter
         #检查是否需要跳过
         return done null if self.options?onShouldParseSheet sheet
         file = _path.join(self.options.cachePath, 'xl', 'worksheets', "#{sheet.name}.xml")
+
+        if self.options.onWillParseSheet
+          stat = _fs.statSync file
+          self.options.onWillParseSheet sheet, stat
         self.parseSheet file, (err, data)->
           self.options.onDidParseSheet sheet, data, done
       cb
@@ -156,7 +160,7 @@ class ParserXLSX extends _events.EventEmitter
     mergeCells = self.sheetMergeCells sheet
     cellNodes = sheet.find("/a:worksheet/a:sheetData/a:row/a:c", @xlsx.namespace)
 
-    cells = _(cellNodes).map((node) ->
+    cells = _(cellNodes).map((node, index) ->
       new Cell(node)
     )
 
@@ -173,6 +177,8 @@ class ParserXLSX extends _events.EventEmitter
 
     cols = d[1].column - d[0].column + 1
     rows = d[1].row - d[0].row + 1
+
+    console.log rows, 'rows'
     _(rows).times ->
       _row = []
       _(cols).times ->
@@ -221,6 +227,7 @@ class ParserXLSX extends _events.EventEmitter
 #
 #      lastRowIndex = rowIndex
 
+    console.log data.length, 'count'
     #data[rowIndex].merge = merge if merge.length > 0
     cb null, merge: mergeCells, data: data
 
